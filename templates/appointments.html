@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointments - Smart Eye Hospital Operations Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">
+                    <i class="fas fa-hospital"></i> Smart Eye Hospital Operations Dashboard
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/patients">Patients</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/patient_registration">
+                                <i class="fas fa-user-plus"></i> Register Patient
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/appointments">
+                                <i class="fas fa-calendar-alt"></i> Appointments
+                            </a>
+                        </li>
+                    </ul>
+                    <div class="d-flex align-items-center">
+                        {% if current_user.is_authenticated %}
+                        <span class="text-light me-3">
+                            <i class="fas fa-user"></i> {{ current_user.full_name }} ({{ current_user.role }})
+                        </span>
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4><i class="fas fa-calendar-alt"></i> Appointment Management</h4>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAppointmentModal">
+                            <i class="fas fa-plus"></i> New Appointment
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filters -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">All Status</option>
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Confirmed">Confirmed</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="doctorFilter">
+                                    <option value="">All Doctors</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" id="dateFilter">
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-secondary" onclick="clearFilters()">
+                                    <i class="fas fa-times"></i> Clear Filters
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Appointments Table -->
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="appointmentsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Doctor</th>
+                                        <th>Date & Time</th>
+                                        <th>Status</th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Appointment Modal -->
+    <div class="modal fade" id="newAppointmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Schedule New Appointment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="appointmentForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="patient_id" class="form-label">Patient *</label>
+                                <select class="form-select" id="patient_id" name="patient_id" required>
+                                    <option value="">Select Patient</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="doctor_id" class="form-label">Doctor *</label>
+                                <select class="form-select" id="doctor_id" name="doctor_id" required>
+                                    <option value="">Select Doctor</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="appointment_date" class="form-label">Date *</label>
+                                <input type="date" class="form-control" id="appointment_date" name="appointment_date" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="appointment_time" class="form-label">Time *</label>
+                                <input type="time" class="form-control" id="appointment_time" name="appointment_time" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="scheduleAppointment()">Schedule</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allAppointments = [];
+        let allPatients = [];
+        let allDoctors = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAppointments();
+            loadPatients();
+            loadDoctors();
+            setupFilters();
+        });
+
+        function loadAppointments() {
+            fetch('/api/appointments')
+                .then(response => response.json())
+                .then(data => {
+                    allAppointments = data;
+                    displayAppointments(data);
+                })
+                .catch(error => console.error('Error loading appointments:', error));
+        }
+
+        function loadPatients() {
+            fetch('/api/patients')
+                .then(response => response.json())
+                .then(data => {
+                    allPatients = data;
+                    const patientSelect = document.getElementById('patient_id');
+                    data.forEach(patient => {
+                        const option = document.createElement('option');
+                        option.value = patient.id;
+                        option.textContent = patient.name;
+                        patientSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error loading patients:', error));
+        }
+
+        function loadDoctors() {
+            fetch('/api/doctors')
+                .then(response => response.json())
+                .then(data => {
+                    allDoctors = data;
+                    const doctorSelect = document.getElementById('doctor_id');
+                    const doctorFilter = document.getElementById('doctorFilter');
+                    data.forEach(doctor => {
+                        const option1 = document.createElement('option');
+                        option1.value = doctor.id;
+                        option1.textContent = doctor.name;
+                        doctorSelect.appendChild(option1);
+
+                        const option2 = document.createElement('option');
+                        option2.value = doctor.id;
+                        option2.textContent = doctor.name;
+                        doctorFilter.appendChild(option2);
+                    });
+                })
+                .catch(error => console.error('Error loading doctors:', error));
+        }
+
+        function displayAppointments(appointments) {
+            const tbody = document.querySelector('#appointmentsTable tbody');
+            tbody.innerHTML = '';
+
+            appointments.forEach(appointment => {
+                const row = document.createElement('tr');
+                const statusClass = getStatusClass(appointment.status);
+
+                row.innerHTML = `
+                    <td>${appointment.patient_name}</td>
+                    <td>${appointment.doctor_name}</td>
+                    <td>${appointment.appointment_date} ${appointment.appointment_time}</td>
+                    <td><span class="badge bg-${statusClass}">${appointment.status}</span></td>
+                    <td>${appointment.notes || '-'}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="updateStatus(${appointment.id}, 'Confirmed')" title="Confirm">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-outline-success" onclick="updateStatus(${appointment.id}, 'Completed')" title="Complete">
+                                <i class="fas fa-check-double"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="updateStatus(${appointment.id}, 'Cancelled')" title="Cancel">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function getStatusClass(status) {
+            const classes = {
+                'Scheduled': 'secondary',
+                'Confirmed': 'primary',
+                'In Progress': 'warning',
+                'Completed': 'success',
+                'Cancelled': 'danger'
+            };
+            return classes[status] || 'secondary';
+        }
+
+        function setupFilters() {
+            document.getElementById('statusFilter').addEventListener('change', applyFilters);
+            document.getElementById('doctorFilter').addEventListener('change', applyFilters);
+            document.getElementById('dateFilter').addEventListener('change', applyFilters);
+        }
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const doctorFilter = document.getElementById('doctorFilter').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+
+            let filtered = allAppointments;
+
+            if (statusFilter) {
+                filtered = filtered.filter(apt => apt.status === statusFilter);
+            }
+            if (doctorFilter) {
+                filtered = filtered.filter(apt => apt.doctor_id == doctorFilter);
+            }
+            if (dateFilter) {
+                filtered = filtered.filter(apt => apt.appointment_date === dateFilter);
+            }
+
+            displayAppointments(filtered);
+        }
+
+        function clearFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('doctorFilter').value = '';
+            document.getElementById('dateFilter').value = '';
+            displayAppointments(allAppointments);
+        }
+
+        function scheduleAppointment() {
+            const form = document.getElementById('appointmentForm');
+            const formData = new FormData(form);
+            const appointmentData = Object.fromEntries(formData.entries());
+
+            fetch('/api/appointments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(appointmentData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Appointment scheduled successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('newAppointmentModal')).hide();
+                    form.reset();
+                    loadAppointments();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while scheduling the appointment.');
+            });
+        }
+
+        function updateStatus(appointmentId, newStatus) {
+            fetch(`/api/appointments/${appointmentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadAppointments();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the appointment.');
+            });
+        }
+    </script>
+</body>
+</html>
